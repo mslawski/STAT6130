@@ -1,4 +1,4 @@
-### Math scores data set
+### Fama & French data set
 ff48 <- read.csv("ff48_546months.csv")
 
 pdf("../fig/ff48_ind1.pdf")

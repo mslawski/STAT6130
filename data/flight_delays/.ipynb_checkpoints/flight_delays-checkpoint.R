@@ -1,6 +1,6 @@
 ### Flight delay data set
-ls()
-flights <- read.csv("../data/flights.csv")
+
+flights <- read.csv("flights.csv")
 nrow(flights) ### n = 5.8M records
 
 airport_list <- c("ATL", "DFW", "DEN", "ORD", "LAX", "CLT", "MCO", "LAS", "PHX", "MIA", "JFK", "SFO", "SEA", "EWR", "IAH", "BOS", "MSP", "DTW", "FLL")
@@ -19,6 +19,6 @@ dat <- matrix(nrow = nrow(agg)/length(airport_list), ncol = length(airport_list)
 for(i in 1:(nrow(agg)/length(airport_list))){
  dat[i,] <- agg[((i-1)*length(airport_list) + 1):(i*length(airport_list)),]$x
 }
-colnames(dat) <- sort(airport_list)
+colnames(dat) <- airport_list
 # obtain correlation matrix
 cor(dat)
