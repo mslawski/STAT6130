@@ -1,11 +1,6 @@
-library(tidyr)
-library(dplyr)
+ls()
 
 ### Example 1: Math Scores
-
-# It might be trick to install the package 'ggm' due to a dependency with another package that is no longer on CRAN..
-# To acccess the data, you can alternatively download the file "marks.rda" from the Course OneDrive, and then read it
-# into your workspace with readRDS('marks.rda'). 
 library(ggm)
 data(marks)
 
@@ -36,6 +31,7 @@ fitPrec <- fitConGraph(Adj, cov(marks), n = nrow(marks), cli = list
 c("algebra", "analysis", "statistics")))
 zapsmall(solve(fitPrec$Shat)*1000)
 # note that the selected elements are exactly equal to zero.
+
 
 ### chaingraph and graphical lasso
 
@@ -72,7 +68,7 @@ lambdagrid <- 10^seq(from = -3, to = 0, by = 0.1)#10^seq(from = -4, to = 0, by =
 glasso_sol <- glassopath(S, rholist = lambdagrid, penalize.diagonal=FALSE)
 image(glasso_sol$wi[,,length(lambdagrid)-20])
 
-# Negative log-likelihood (~Stein loss) on the test set
+# Stein loss (negative log-likelihood) on the test set
 loss <- function(Omegahat) -determinant(Omegahat, log = TRUE)$modulus + sum(Omegahat * Stest)
 
 testerrs <- numeric(length(lambdagrid))
@@ -86,27 +82,37 @@ image(glasso_sol$wi[,,which.min(testerrs)])
 
 ### real data example: an excerpt from the Climate data
 
+data_all <- read.csv("../data/climate/data_all.csv", header = TRUE)
+
 # This example follows a similar pattern as the example in
 # highdim_PCA.R. The main difference is that the variable
 # of interest is now the PM2.5 concentration. As before,
 # we extract blocks of 24 hours and consider the 24 hours in a day as variables.
 # Different rows are treated as different days (treated independently, for simplicity)
 
-data_all <- readRDS("../../data/climate/data_all.rds")
-# extract all data from weather station Nongzhanguan
 dat_Nong <- data_all[data_all$station == "Nongzhanguan",]
 rm(data_all)
-
 dates <- paste(dat_Nong$month, dat_Nong$day, dat_Nong$year, sep = "-")
-dat_day <- dat_Nong %>% select(all_of(c("hour", "day", "month", "year", "PM2.5")))
+dat_day <- dat_Nong[,colnames(dat_Nong) %in% c("hour", "day", "month", "year", "PM2.5")]
 
-dat_day_f <- dat_day %>%  pivot_wider(names_from = hour, values_from = PM2.5) %>% drop_na()
-dat_final <- dat_day_f %>% select(-all_of(c("day", "month", "year"))) %>% mutate(across(everything(), ~ log(.)))
+dat_day_c <- split(dat_day["PM2.5"], f = as.factor(dates))
+leng <- unlist(lapply(dat_day_c, function(z) length(z[[1]])))
 
+
+dat_day_f <- matrix(nrow = sum(leng == 24), ncol = 24, data = 0)
+counter <- 0
+for(i in 1:length(dat_day_c)){
+ tmp <-  dat_day_c[[i]]
+ if(nrow(tmp) == 24){
+     counter <- counter + 1
+     dat_day_f[counter,] <- as.matrix(tmp)
+ }
+}
+
+dat_final <- log(dat_day_f)
 Cfull <- cor(dat_final)
 
 ### --- sparse inverse covariance matrix seems like a suitable model
-par(mfrow = c(2,1))
 image(Cfull)
 image(solve(Cfull))
 
@@ -124,6 +130,7 @@ glasso_sol <- glassopath(cor(dat_train), rholist = lambdagrid, penalize.diagonal
 
 # Stein loss (negative log-likelihood) on the test set
 
+
 testerrs_real <- numeric(length(lambdagrid))
 
 for(k in 1:length(testerrs)){
@@ -131,12 +138,9 @@ for(k in 1:length(testerrs)){
 }
 
 image(glasso_sol$wi[,,which.min(testerrs_real)])
-
 # boxplot off-diagonal entries, w/regularization
 Omegahat_real <- glasso_sol$wi[,,which.min(testerrs_real)]
 boxplot(-Omegahat_real[lower.tri(Omegahat_real)])
 # boxplot w/o regularization
 Omegahat_plain <- solve(cor(dat_train))
 boxplot(-Omegahat_plain[lower.tri(Omegahat_plain)])
-
-

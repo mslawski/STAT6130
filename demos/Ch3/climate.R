@@ -1,9 +1,9 @@
+library(tidyr)
+
 ### Beijing climate data set
 
-
-### DATA PRE-PROCESSING
-
-ls()
+### data preparation
+setwd("../../data/climate/")
 filenames <- list.files()
 filenames <- filenames[grep("PRSA", filenames)]
 
@@ -12,6 +12,7 @@ names(stations) <- rep("", length(stations))
 
 #sapply(filenames, function(z) length(readLines(z)))-1
 # each file has 35,064 records
+
 n0 <- 35064
 
 data_combined <- as.data.frame(matrix(nrow = length(filenames)*n0, ncol = 17))
@@ -24,30 +25,25 @@ for(i in 1:length(filenames)){
 
 }
 
-is_c <- apply(data_combined, 1, function(z) !any(is.na(z)))
+data_all <- data_combined %>% drop_na()
+#saveRDS(data_all, file = "data_all.rds")
 
-data_combined_c <- data_combined[is_c,]
-row_nam <- as.numeric(rownames(data_combined_c))
+### consider only one station, extract levels of six pollutants
 
-write.csv(data_combined_c, file = "data_all.csv")
+dat_log <- data_all %>% 
+    filter (station == "Nongzhanguan") %>% 
+    select(all_of(c("PM2.5", "PM10", "SO2", "NO2", "CO", "O3"))) %>% 
+    mutate(across(everything(), log))
 
-                                        #X <- data_combined_c[,c("TEMP","PRES","DEWP","RAIN","WSPM", "CO")]
-library(xtable)
-xtable(data_combined[c(1,410819),])
-
-
-### PCA
-ls()
-data_all <- read.csv("data_all.csv", header = TRUE)
-
-
-dat <- data_all[data_all$station == "Nongzhanguan", colnames(data_all) %in% c("PM2.5", "PM10", "SO2", "NO2", "CO", "O3")]
-dat_log <- apply(dat, 2, log)
-#any(is.na(dat_log)) -- check
+# marginal distributions
 boxplot(dat_log)
 
+# correlation matrix
+cor(dat_log)
 
+# eigenvalues
 eigen(cor(dat_log))$values
+# percentage of variance explained 
 cumsum(eigen(cor(dat_log))$values)/sum(eigen(cor(dat_log))$values)
 
 ### compute principal components from hand
@@ -57,11 +53,15 @@ dat_log_s <- scale(dat_log)
 colMeans(dat_log_s) # 0
 apply(dat_log_s, 2, sd) #1
 
+#
 V <- eigen(cov(dat_log_s))$vectors
 Z <- dat_log_s %*% V
-apply(Z, 2, var) #eigen(cor(dat_log))$values
+#apply(Z, 2, var) 
 
-pdf("../../fig/PCs_scatter.pdf")
+#pdf("../../fig/PCs_scatter.pdf")
+
+# scatterplot of first two PCs
 plot(Z[,1], Z[,2], cex = 1.5, pch = 16)
-dev.off()
-cov(Z) # all uncorrelated
+
+#dev.off()
+cov(Z) # all uncorrelated; diagonal equal to eigen(cor(dat_log))$values
