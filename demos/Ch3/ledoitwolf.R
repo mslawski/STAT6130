@@ -59,7 +59,7 @@ plot(lambdagrid, err)
 lambdagrid[which.min(err)] # optimal lambda
 
 lambdastar = lambdagrid[which.min(err)] 
-Sigmahat = lambdastar*T + lambdastar*Strain 
+Sigmahat = lambdastar*T + (1-lambdastar)*Strain 
 
 # Sigmahat is a much better conditioned estimator than the plain sample covariance matrix 
 plot(eigen(Sigmahat)$values, eigen(Strain)$values,log = "xy")
